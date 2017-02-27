@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script src="pixi.js"></script>
+		<script src="pixi-spine.js"></script>
+		<script>
+			var app;
+			var spine;
+	
+			window.addEventListener("load",init);
+
+			function playAnim()
+			{
+				spine.state.setAnimation(0,"animation",false);
+			}
+
+			function playAnimAfterHiding()
+			{
+				var method = document.getElementById("method").value;
+				
+				if (method == "direct")
+				{
+					console.log("playing directly");
+					//this doesn't work
+					playAnim();
+				}
+				else if (method == "ticker")
+				{
+					//nor does this
+					PIXI.ticker.shared.addOnce(function(){console.log("Ticker play"); playAnim()});
+				}
+				else if (method == "timeout")
+				{
+					//however, after waiting ~20ms, it will play
+					setTimeout(function(){console.log("SetTimeout play"); playAnim()},20);
+				}
+				else if (method == "raf")
+				{
+					//RAF also works
+					window.requestAnimationFrame(function(){console.log("RAF play"); playAnim()});
+				}
+			}
+
+			function init()
+			{
+				app = new PIXI.Application();
+				document.getElementById("canvas-container").appendChild(app.view);
+
+				//add, play animation, wait 2000ms, set visible to false, wait 1000ms, set visible to true, play anim again
+				document.getElementById("test-visibility").addEventListener("click",function(e){
+					app.stage.addChild(spine);
+					playAnim();
+					
+					setTimeout(function(){
+						console.log("hiding spine and waiting 1000ms");
+						spine.visible = false;
+						setTimeout(function(){
+							console.log("showing spine and playing anim");
+							spine.visible = true;
+							playAnimAfterHiding();
+						},1000);
+					},2000)
+				});
+
+				//add, play animation, wait 2000ms, remove from stage, wait 1000ms, add to stage, play anim again
+				document.getElementById("test-removing").addEventListener("click",function(e){
+					app.stage.addChild(spine);
+					playAnim();
+
+					setTimeout(function(){
+						console.log("removing spine and waiting 1000ms");
+						spine.parent.removeChild(spine);
+						setTimeout(function(){
+							console.log("adding spine and playing anim");
+							app.stage.addChild(spine);
+							playAnimAfterHiding();
+						},1000);
+					},2000);
+				});
+
+				PIXI.loader
+					.add("test","test.json")
+					.load(function(loader,resources){
+						spine = new PIXI.spine.Spine(resources.test.spineData);
+						spine.scale.set(0.5);
+
+						spine.position.set(app.renderer.width/2,app.renderer.height/2);
+						app.start();
+					});
+			}
+		</script>
+	</head>
+	<body>
+		<div id="canvas-container"></div>
+		<button id="test-visibility">test - visibility</button>
+		<button id="test-removing">test - removing</button>
+		<select id="method">
+			<option label="direct" value="direct"/>
+			<option label="ticker" value="ticker"/>
+			<option label="timeout" value="timeout"/>
+			<option label="RAF" value="raf"/>
+		</select>
+	</body>
+</html>
